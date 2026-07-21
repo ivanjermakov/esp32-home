@@ -1,0 +1,6 @@
+menu "WiFi Credentials"
+    config WIFI_SSID
+        string "SSID"
+    config WIFI_PASSWORD
+        string "Password"
+endmenu
