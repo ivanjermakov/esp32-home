@@ -93,6 +93,22 @@ void ir_tx_nec(uint32_t code) {
     }
 }
 
+void ir_tx_task(void* arg) {
+    while (true) {
+        printf(" > 0x%08" PRIx32 "\n", code_on);
+        ir_tx_nec(code_on);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+void ir_rx_task(void* arg) {
+    while (true) {
+        if (xQueueReceive(ir_queue, &code, portMAX_DELAY)) {
+            printf("<  0x%08" PRIx32 "\n", code);
+        }
+    }
+}
+
 void app_main() {
 
     ir_queue = xQueueCreate(256, sizeof(uint32_t));
@@ -106,13 +122,6 @@ void app_main() {
     gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     gpio_isr_handler_add(IR_RX_GPIO, ir_rx_isr, NULL);
 
-    while (true) {
-        if (xQueueReceive(ir_queue, &code, pdMS_TO_TICKS(100))) {
-            printf("0x%08" PRIx32 "\n", code);
-        }
-
-        printf("sending code %" PRIx32 "\n", code_on);
-        ir_tx_nec(code_on);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    xTaskCreate(ir_tx_task, "ir_tx", 2048, NULL, 5, NULL);
+    xTaskCreate(ir_rx_task, "ir_rx", 2048, NULL, 4, NULL);
 }
