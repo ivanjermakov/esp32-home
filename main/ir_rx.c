@@ -20,6 +20,7 @@ void IRAM_ATTR ir_rx_isr(void* arg) {
 void ir_rx_task(void* arg) {
     while (true) {
         if (code_len > 0) {
+            ESP_LOGD(__FILE__, "code received");
             for (uint32_t i = 0; i < code_len; i++) {
                 printf("%ld ", code_buf[i]);
             }
@@ -30,6 +31,8 @@ void ir_rx_task(void* arg) {
 }
 
 void app_main_rx() {
+    esp_log_level_set(__FILE__, ESP_LOG_VERBOSE);
+
     gpio_config_t cfg = {
         .pin_bit_mask = 1ULL << IR_RX_GPIO,
         .mode = GPIO_MODE_INPUT,

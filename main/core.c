@@ -5,6 +5,7 @@
 #include "esp_chip_info.h"
 #include "esp_event.h"
 #include "esp_flash.h"
+#include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
@@ -17,4 +18,3 @@
 
 #define IR_TX_GPIO 4
 #define IR_RX_GPIO 15
-

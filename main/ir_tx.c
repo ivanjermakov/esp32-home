@@ -50,16 +50,18 @@ void ir_tx_code(uint32_t* code, uint32_t len) {
 
 void ir_tx_task(void* arg) {
     while (true) {
-        printf(" > code_on\n");
+        ESP_LOGD(__FILE__, "code_on");
         ir_tx_code(code_on, sizeof(code_on) / sizeof(uint32_t));
         vTaskDelay(pdMS_TO_TICKS(5000));
-        printf(" > code_off\n");
+        ESP_LOGD(__FILE__, "code_off");
         ir_tx_code(code_off, sizeof(code_off) / sizeof(uint32_t));
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
 
 void app_main_tx() {
+    esp_log_level_set(__FILE__, ESP_LOG_VERBOSE);
+
     ledc_timer_config_t timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .timer_num = LEDC_TIMER_0,
