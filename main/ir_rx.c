@@ -30,7 +30,7 @@ void ir_rx_task(void* arg) {
     }
 }
 
-void app_main_rx() {
+void main_ir_rx() {
     esp_log_level_set(__FILE__, ESP_LOG_VERBOSE);
 
     gpio_config_t cfg = {

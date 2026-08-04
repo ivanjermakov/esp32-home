@@ -59,7 +59,7 @@ void ir_tx_task(void* arg) {
     }
 }
 
-void app_main_tx() {
+void main_ir_tx() {
     esp_log_level_set(__FILE__, ESP_LOG_VERBOSE);
 
     ledc_timer_config_t timer = {
