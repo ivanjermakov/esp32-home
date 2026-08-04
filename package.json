@@ -2,7 +2,9 @@
     "name": "esp32-home",
     "version": "1.0.0",
     "scripts": {
-        "start": "node --import=tsx server/index.ts"
+        "start": "node --import=tsx server/server.ts",
+        "build:fe": "tsgo && vite build",
+        "watch:fe": "find src | entr npm run build:fe"
     },
     "type": "module",
     "dependencies": {
