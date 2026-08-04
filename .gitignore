@@ -2,3 +2,7 @@ build/
 managed_components/
 sdkconfig*
 .ccls-cache/
+*.lock
+
+node_modules/
+pnpm-*.yaml

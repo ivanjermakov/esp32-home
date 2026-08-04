@@ -1,0 +1,106 @@
+import { createReadStream } from 'fs'
+import { IncomingMessage, ServerResponse, createServer } from 'http'
+import { extname, join, normalize } from 'path'
+import { stat } from 'fs/promises'
+import { exit } from 'process'
+import { WebSocketServer } from 'ws'
+import { WebSocket } from 'ws'
+import { debug, error, info, request } from './log'
+
+const streamFile = (filePath: string, res: ServerResponse): void => {
+    const ext = extname(filePath).toLowerCase()
+    const ctype = contentType[ext] ?? contentType['.txt']
+    res.setHeader('Content-Type', ctype)
+    const stream = createReadStream(filePath)
+    stream.on('error', () => {
+        res.statusCode = 500
+        res.end('Server error')
+    })
+    stream.pipe(res)
+}
+
+const contentType: Record<string, string> = {
+    '.html': 'text/html; charset=utf-8',
+    '.htm': 'text/html; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.txt': 'text/plain; charset=utf-8',
+    '.wav': 'audio/wav',
+    '.mp4': 'video/mp4',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2'
+}
+
+const tryServeFile = async (url: string | undefined, res: ServerResponse): Promise<boolean> => {
+    try {
+        let urlPath = decodeURIComponent(url ?? '/')
+        if (urlPath === '/') urlPath = '/index.html'
+        const truePath = normalize(join(distPath, urlPath))
+        if (!truePath.startsWith(normalize(`${distPath}/`))) return false
+
+        const stats = await stat(truePath)
+        if (stats.isFile()) {
+            streamFile(truePath, res)
+            return true
+        }
+    } catch (e) {}
+    return false
+}
+
+const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    request(req)
+    const host = req.headers.host ?? 'localhost'
+    const rawUrl = `http://${host}${req.url ?? '/'}`
+    const url = new URL(rawUrl)
+
+    if (await tryServeFile(url.pathname, res)) {
+        return
+    }
+
+    if (url.pathname === '/' && (await tryServeFile('/', res))) {
+        return
+    }
+
+    res.statusCode = 404
+    res.end()
+}
+
+const distPath = process.env.HOME_DIST!
+if (!distPath) {
+    error('no dist path')
+    exit(1)
+}
+
+const server = createServer((req, res) => {
+    handleRequest(req, res).catch(e => {
+        error('request error', e)
+        res.statusCode = 500
+        res.end('Server error')
+    })
+})
+
+const clients: WebSocket[] = []
+const wsServer = new WebSocketServer({ server })
+wsServer.on('connection', ws => {
+    clients.push(ws)
+    ws.on('message', (e: Buffer) => {
+        debug('msg', e.toString())
+        ws.send(e)
+    })
+    ws.on('close', () => {
+        clients.splice(clients.indexOf(ws), 1)
+        debug('client disconnected')
+    })
+    debug('client connected')
+})
+
+const port = Number.parseInt(process.env.HOME_PORT ?? '3000')
+server.listen(port, () => {
+    info(`server started :${port}`)
+})
