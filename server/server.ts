@@ -133,8 +133,9 @@ wsServer.on('connection', (ws: WebSocket & { isAlive?: boolean }, req) => {
         ws.isAlive = true
     })
     ws.on('close', () => {
-        clients[name].splice(clients[name].indexOf(ws), 1)
         debug(`client "${name}" disconnected`)
+        const i = clients[name].indexOf(ws)
+        if (i >= 0) clients[name].splice(i, 1)
     })
 })
 
@@ -147,8 +148,9 @@ setInterval(() => {
     Object.entries(clients).forEach(([name, group]) =>
         group.forEach(ws => {
             if (!ws.isAlive) {
-                clients[name].splice(clients[name].indexOf(ws), 1)
                 debug(`client "${name}" heartbeat failed`)
+                const i = clients[name].indexOf(ws)
+                if (i >= 0) clients[name].splice(i, 1)
             }
             ws.ping()
             ws.isAlive = false
