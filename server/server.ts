@@ -110,23 +110,27 @@ const server = createServer((req, res) => {
     })
 })
 
-const clients: { [name: string]: WebSocket[] } = Object.fromEntries(
+const clients: { [name: string]: (WebSocket & { isAlive?: boolean })[] } = Object.fromEntries(
     ['', ...Object.keys(deviceSchema)].map(name => [name, []])
 )
 const wsServer = new WebSocketServer({ server })
-wsServer.on('connection', (ws, req) => {
+wsServer.on('connection', (ws: WebSocket & { isAlive?: boolean }, req) => {
     request(req)
     const host = req.headers.host ?? 'localhost'
     const rawUrl = `http://${host}${req.url ?? '/'}`
     const url = new URL(rawUrl)
     const name = url.pathname.slice(1)
 
+    ws.isAlive = true
     clients[name].push(ws)
     debug(`client "${name}" connected`)
 
     ws.on('message', (e: Buffer) => {
         debug('msg', e.toString())
         ws.send(e)
+    })
+    ws.on('pong', () => {
+        ws.isAlive = true
     })
     ws.on('close', () => {
         clients[name].splice(clients[name].indexOf(ws), 1)
@@ -138,3 +142,16 @@ const port = Number.parseInt(process.env.HOME_PORT ?? '3000')
 server.listen(port, () => {
     info(`server started :${port}`)
 })
+
+setInterval(() => {
+    Object.entries(clients).forEach(([name, group]) =>
+        group.forEach(ws => {
+            if (!ws.isAlive) {
+                clients[name].splice(clients[name].indexOf(ws), 1)
+                debug(`client "${name}" heartbeat failed`)
+            }
+            ws.ping()
+            ws.isAlive = false
+        })
+    )
+}, 10e3)
