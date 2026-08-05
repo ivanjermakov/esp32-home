@@ -33,7 +33,7 @@ body {
 }
 
 html {
-    font-size: 14px;
+    font-size: 16px;
     overscroll-behavior: none;
 }
 
@@ -162,6 +162,7 @@ select {
         button {
             width: 5rem;
             padding: 1rem;
+            border-radius: .5rem;
 
             &:first-of-type {
                 margin-left: auto;
