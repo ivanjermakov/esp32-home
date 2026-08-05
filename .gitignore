@@ -7,3 +7,4 @@ sdkconfig*
 dist/
 node_modules/
 pnpm-*.yaml
+*.db

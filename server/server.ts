@@ -6,6 +6,7 @@ import { exit } from 'process'
 import { WebSocketServer } from 'ws'
 import { WebSocket } from 'ws'
 import { Device, deviceSchema } from './api'
+import { db, initDb } from './db'
 import { debug, error, info, request } from './log'
 import { assertSearchParams } from './url'
 
@@ -100,6 +101,24 @@ if (!distPath) {
     error('no dist path')
     exit(1)
 }
+
+let deinitizlized = false
+const deinit = async (): Promise<void> => {
+    if (deinitizlized) return
+    deinitizlized = true
+    debug('deinitializing')
+
+    await new Promise<void>((resolve, reject) =>
+        server.listening ? server.close(e => (e ? reject(e) : resolve())) : resolve()
+    )
+    await db.close()
+    info('deinitialized')
+    exit(0)
+}
+process.on('SIGINT', deinit)
+process.on('SIGTERM', deinit)
+
+await initDb()
 
 const server = createServer((req, res) => {
     handleRequest(req, res).catch(e => {
