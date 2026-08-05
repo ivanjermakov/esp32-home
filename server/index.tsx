@@ -3,12 +3,14 @@
 import { BsCircleFill } from 'solid-icons/bs'
 import { Component, For, Match, Switch, createSignal, onMount } from 'solid-js'
 import { render } from 'solid-js/web'
-import { Device } from './api'
+import { Device, Trigger } from './api'
 import './index.css'
 
 const Main: Component = () => {
     const [$loaded, setLoaded] = createSignal(false)
     const [$devices, setDevices] = createSignal<Device[]>([])
+    const [$cron, setCron] = createSignal('0 0 * * *')
+    const [$action, setAction] = createSignal('')
 
     onMount(async () => {
         setDevices(await (await fetch('/devices')).json())
@@ -23,6 +25,33 @@ const Main: Component = () => {
         }
     }
 
+    const addTrigger = async (e: Event, device: Device) => {
+        e.preventDefault()
+        const trigger: Trigger = {
+            id: undefined!,
+            device: device.name,
+            enabled: false,
+            actions: [$action()],
+            cron: $cron()
+        }
+        const res = await fetch(`/trigger`, { method: 'POST', body: JSON.stringify(trigger) })
+        if (!res.ok) {
+            const msg = await res.text()
+            alert(`${res.status} ${msg}`)
+        }
+        setDevices(await (await fetch('/devices')).json())
+    }
+
+    const toggleTrigger = async (trigger: Trigger, enabled: boolean) => {
+        const updated = { ...trigger, enabled }
+        const res = await fetch(`/trigger`, { method: 'PUT', body: JSON.stringify(updated) })
+        if (!res.ok) {
+            const msg = await res.text()
+            alert(`${res.status} ${msg}`)
+        }
+        setDevices(await (await fetch('/devices')).json())
+    }
+
     return (
         <>
             <Switch>
@@ -30,19 +59,60 @@ const Main: Component = () => {
                     <For each={$devices()}>
                         {device => (
                             <div class="device">
-                                <BsCircleFill classList={{ status: true, live: device.live }} />
-                                <span class="name">{device.name}</span>
-                                <For each={device.actions}>
-                                    {action => (
+                                <main>
+                                    <BsCircleFill classList={{ status: true, live: device.live }} />
+                                    <span class="name">{device.name}</span>
+                                    <For each={device.actions}>
+                                        {action => (
+                                            <button
+                                                type="button"
+                                                disabled={!device.live}
+                                                onClick={() => sendAction(device, action)}
+                                            >
+                                                {action}
+                                            </button>
+                                        )}
+                                    </For>
+                                </main>
+                                <div class="triggers">
+                                    <For each={device.triggers}>
+                                        {trigger => (
+                                            <div class="trigger">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={trigger.enabled}
+                                                    onClick={e =>
+                                                        toggleTrigger(trigger, (e.target as HTMLInputElement).checked)
+                                                    }
+                                                />
+                                                <span>{trigger.cron}</span>
+                                                <For each={trigger.actions}>
+                                                    {action => <span class="action">{action}</span>}
+                                                </For>
+                                            </div>
+                                        )}
+                                    </For>
+                                    <form>
+                                        <input
+                                            type="text"
+                                            placeholder="0 0 * * *"
+                                            value={$cron()}
+                                            onInput={e => setCron(e.target.value)}
+                                        />
+                                        <select value={$action()} onInput={e => setAction(e.target.value)}>
+                                            <For each={device.actions}>
+                                                {action => <option value={action}>{action}</option>}
+                                            </For>
+                                        </select>
                                         <button
-                                            type="button"
+                                            type="submit"
                                             disabled={!device.live}
-                                            onClick={() => sendAction(device, action)}
+                                            onClick={e => addTrigger(e, device)}
                                         >
-                                            {action}
+                                            add
                                         </button>
-                                    )}
-                                </For>
+                                    </form>
+                                </div>
                             </div>
                         )}
                     </For>

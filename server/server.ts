@@ -5,8 +5,8 @@ import { stat } from 'fs/promises'
 import { exit } from 'process'
 import { WebSocketServer } from 'ws'
 import { WebSocket } from 'ws'
-import { Device, deviceSchema } from './api'
-import { db, initDb } from './db'
+import { Device, Trigger, deviceSchema } from './api'
+import { db, initDb, sql } from './db'
 import { debug, error, info, request } from './log'
 import { assertSearchParams } from './url'
 
@@ -40,6 +40,26 @@ const contentType = {
     '.woff2': 'font/woff2'
 }
 
+const readBody = (req: IncomingMessage): Promise<ArrayBuffer> => {
+    return new Promise<ArrayBuffer>((resolve, reject) => {
+        const chunks: Buffer[] = []
+        req.on('data', chunk => chunks.push(chunk))
+        req.on('end', () => resolve(joinBuffers(chunks)))
+        req.on('error', reject)
+    })
+}
+
+const joinBuffers = (buffers: Buffer[]): ArrayBuffer => {
+    const totalLength = buffers.reduce((sum, b) => sum + b.byteLength, 0)
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+    for (const buf of buffers) {
+        result.set(buf, offset)
+        offset += buf.byteLength
+    }
+    return result.buffer
+}
+
 const tryServeFile = async (url: string | undefined, res: ServerResponse): Promise<boolean> => {
     try {
         let urlPath = decodeURIComponent(url ?? '/')
@@ -63,15 +83,48 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
     const url = new URL(rawUrl)
 
     if (req.method === 'GET' && url.pathname === '/devices') {
-        const devices: Device[] = Object.entries(deviceSchema).map(([name, actions]) => ({
-            name: name as keyof typeof deviceSchema,
-            actions: actions as any,
-            live: clients[name].length > 0
-        }))
+        const devices: Device[] = await Promise.all(
+            Object.entries(deviceSchema).map(async ([name, actions]) => {
+                const raw = await db.all(sql`select id, body from Trigger where device = ?`, name)
+                const triggers = raw.map(row => ({ ...JSON.parse(row.body), id: row.id }))
+                return {
+                    name: name as keyof typeof deviceSchema,
+                    actions: actions as any,
+                    live: clients[name].length > 0,
+                    triggers
+                }
+            })
+        )
         res.setHeader('Content-Type', contentType['.json'])
         res.write(JSON.stringify(devices))
         res.statusCode = 200
         res.end()
+        return
+    }
+    if (req.method === 'POST' && url.pathname === '/trigger') {
+        const body: Trigger = JSON.parse(new TextDecoder().decode(await readBody(req)))
+        const insert = await db.run(
+            sql`insert into Trigger (device, body) values (?, ?)`,
+            body.device,
+            JSON.stringify(body)
+        )
+
+        body.id = insert.lastID!
+        res.setHeader('Content-Type', contentType['.json'])
+        res.write(JSON.stringify(body))
+        res.statusCode = 201
+        res.end()
+        return
+    }
+    if (req.method === 'PUT' && url.pathname === '/trigger') {
+        const body: Trigger = JSON.parse(new TextDecoder().decode(await readBody(req)))
+        await db.run(sql`update Trigger set body = ? where id = ?`, JSON.stringify(body), body.id)
+
+        res.setHeader('Content-Type', contentType['.json'])
+        res.write(JSON.stringify(body))
+        res.statusCode = 201
+        res.end()
+        return
     }
 
     if (req.method === 'POST' && url.pathname === '/action') {
@@ -80,8 +133,9 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
         if (cs.length === 0) throw Error('no device')
         const actions = deviceSchema[params.device as keyof typeof deviceSchema]
         cs.forEach(c => c.send(new Uint8Array([actions.indexOf(params.action as any)])))
-        res.statusCode = 200
+        res.statusCode = 201
         res.end()
+        return
     }
 
     if (await tryServeFile(url.pathname, res)) {

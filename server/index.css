@@ -139,33 +139,66 @@ select {
 
     .device {
         display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem;
+        flex-direction: column;
         background-color: var(--bg2);
         border-radius: 1rem;
+        padding: 1rem;
+        gap: 1rem;
 
-        .status {
-            color: var(--red);
+        main {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
 
-            &.live {
-                color: var(--green);
+            .status {
+                color: var(--red);
+
+                &.live {
+                    color: var(--green);
+                }
+            }
+
+            .name {
+                padding-bottom: .2rem;
+                font-size: 1.5rem;
+            }
+
+
+            button {
+                width: 5rem;
+                padding: 1rem;
+                border-radius: .5rem;
+
+                &:first-of-type {
+                    margin-left: auto;
+                }
             }
         }
 
-        .name {
-            padding-bottom: .2rem;
-            font-size: 1.5rem;
-        }
+        .triggers {
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
 
+            form, .trigger {
+                display: flex;
+                align-items: center;
+                gap: .5rem;
 
-        button {
-            width: 5rem;
-            padding: 1rem;
-            border-radius: .5rem;
+                button, input, select {
+                    border-radius: .25rem;
+                }
 
-            &:first-of-type {
-                margin-left: auto;
+                input[type="text"] {
+                    margin-left: 26px;
+                    width: 100%;
+                }
+
+                .action {
+                    background-color: var(--bg3);
+                    padding-inline: .25rem;
+                    border-radius: .25rem;
+                }
             }
         }
     }

@@ -30,6 +30,14 @@ export const initDb = async (): Promise<Database> => {
     })
     db.on('close', () => debug('db close'))
 
+    db.exec(sql`
+create table if not exists Trigger (
+    id integer primary key autoincrement,
+    device text not null,
+    body text not null
+)
+    `)
+
     debug('initialized')
     return db
 }
