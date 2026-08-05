@@ -10,7 +10,7 @@ import { debug, error, info, request } from './log'
 
 const streamFile = (filePath: string, res: ServerResponse): void => {
     const ext = extname(filePath).toLowerCase()
-    const ctype = contentType[ext] ?? contentType['.txt']
+    const ctype = contentType[ext as keyof typeof contentType] ?? contentType['.txt']
     res.setHeader('Content-Type', ctype)
     const stream = createReadStream(filePath)
     stream.on('error', () => {
@@ -20,7 +20,7 @@ const streamFile = (filePath: string, res: ServerResponse): void => {
     stream.pipe(res)
 }
 
-const contentType: Record<string, string> = {
+const contentType = {
     '.html': 'text/html; charset=utf-8',
     '.htm': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -59,6 +59,18 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
     const host = req.headers.host ?? 'localhost'
     const rawUrl = `http://${host}${req.url ?? '/'}`
     const url = new URL(rawUrl)
+
+    if (url.pathname === '/devices') {
+        const devices = Object.entries(deviceSchema).map(([name, actions]) => ({
+            name,
+            actions,
+            enabled: clients[name].length > 0
+        }))
+        res.setHeader('Content-Type', contentType['.json'])
+        res.write(JSON.stringify(devices))
+        res.statusCode = 200
+        res.end()
+    }
 
     if (await tryServeFile(url.pathname, res)) {
         return
