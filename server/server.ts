@@ -5,6 +5,7 @@ import { stat } from 'fs/promises'
 import { exit } from 'process'
 import { WebSocketServer } from 'ws'
 import { WebSocket } from 'ws'
+import { deviceSchema } from './api'
 import { debug, error, info, request } from './log'
 
 const streamFile = (filePath: string, res: ServerResponse): void => {
@@ -85,19 +86,28 @@ const server = createServer((req, res) => {
     })
 })
 
-const clients: WebSocket[] = []
+const clients: { [name: string]: WebSocket[] } = Object.fromEntries(
+    ['', ...Object.keys(deviceSchema)].map(name => [name, []])
+)
 const wsServer = new WebSocketServer({ server })
-wsServer.on('connection', ws => {
-    clients.push(ws)
+wsServer.on('connection', (ws, req) => {
+    request(req)
+    const host = req.headers.host ?? 'localhost'
+    const rawUrl = `http://${host}${req.url ?? '/'}`
+    const url = new URL(rawUrl)
+    const name = url.pathname.slice(1)
+
+    clients[name].push(ws)
+    debug('client connected', name)
+
     ws.on('message', (e: Buffer) => {
         debug('msg', e.toString())
         ws.send(e)
     })
     ws.on('close', () => {
-        clients.splice(clients.indexOf(ws), 1)
-        debug('client disconnected')
+        clients[name].splice(clients[name].indexOf(ws), 1)
+        debug('client disconnected', name)
     })
-    debug('client connected')
 })
 
 const port = Number.parseInt(process.env.HOME_PORT ?? '3000')
