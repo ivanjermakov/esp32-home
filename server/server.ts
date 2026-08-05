@@ -122,7 +122,7 @@ wsServer.on('connection', (ws, req) => {
     const name = url.pathname.slice(1)
 
     clients[name].push(ws)
-    debug('client connected', name)
+    debug(`client "${name}" connected`)
 
     ws.on('message', (e: Buffer) => {
         debug('msg', e.toString())
@@ -130,7 +130,7 @@ wsServer.on('connection', (ws, req) => {
     })
     ws.on('close', () => {
         clients[name].splice(clients[name].indexOf(ws), 1)
-        debug('client disconnected', name)
+        debug(`client "${name}" disconnected`)
     })
 })
 
