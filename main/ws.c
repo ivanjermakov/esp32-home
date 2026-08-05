@@ -3,13 +3,21 @@
 void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data) {
     esp_websocket_event_data_t* data = (esp_websocket_event_data_t*)event_data;
     switch (event_id) {
-        case WEBSOCKET_EVENT_CONNECTED:
+        case WEBSOCKET_EVENT_CONNECTED: {
             esp_websocket_client_send_text(data->client, "Hello", 5, portMAX_DELAY);
             break;
-        case WEBSOCKET_EVENT_DATA:
-            ESP_LOGI(__FILE__, "recv: %.*s", data->data_len, (char*)data->data_ptr);
+        }
+        case WEBSOCKET_EVENT_DATA: {
+            if (data->data_len == 0) break;
+            ESP_LOGI(__FILE__, "recv %d bytes: %.*s", data->data_len, data->data_len,
+                     (char*)data->data_ptr);
+            ESP_LOG_BUFFER_HEX(__FILE__, data->data_ptr, data->data_len);
             break;
-        case WEBSOCKET_EVENT_DISCONNECTED: ESP_LOGI(__FILE__, "disconnected"); break;
+        }
+        case WEBSOCKET_EVENT_DISCONNECTED: {
+            ESP_LOGI(__FILE__, "disconnected");
+            break;
+        }
     }
 }
 
