@@ -1,4 +1,5 @@
 #include "core.c"
+#include "ir_tx.c"
 
 void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data) {
     esp_websocket_event_data_t* data = (esp_websocket_event_data_t*)event_data;
@@ -12,6 +13,23 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
             ESP_LOGI(__FILE__, "recv %d bytes: %.*s", data->data_len, data->data_len,
                      (char*)data->data_ptr);
             ESP_LOG_BUFFER_HEX(__FILE__, data->data_ptr, data->data_len);
+            if (data->data_len == 1) {
+                uint8_t cmd = data->data_ptr[0];
+                switch (cmd) {
+                    case 0x00: {
+                        ir_send_on();
+                        break;
+                    }
+                    case 0x01: {
+                        ir_send_off();
+                        break;
+                    }
+                    default: {
+                        ESP_LOGI(__FILE__, "unknown command %d", cmd);
+                        break;
+                    }
+                }
+            }
             break;
         }
         case WEBSOCKET_EVENT_DISCONNECTED: {
