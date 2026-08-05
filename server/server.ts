@@ -7,6 +7,7 @@ import { WebSocketServer } from 'ws'
 import { WebSocket } from 'ws'
 import { Device, deviceSchema } from './api'
 import { debug, error, info, request } from './log'
+import { assertSearchParams } from './url'
 
 const streamFile = (filePath: string, res: ServerResponse): void => {
     const ext = extname(filePath).toLowerCase()
@@ -60,7 +61,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
     const rawUrl = `http://${host}${req.url ?? '/'}`
     const url = new URL(rawUrl)
 
-    if (url.pathname === '/devices') {
+    if (req.method === 'GET' && url.pathname === '/devices') {
         const devices: Device[] = Object.entries(deviceSchema).map(([name, actions]) => ({
             name: name as keyof typeof deviceSchema,
             actions: actions as any,
@@ -68,6 +69,16 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
         }))
         res.setHeader('Content-Type', contentType['.json'])
         res.write(JSON.stringify(devices))
+        res.statusCode = 200
+        res.end()
+    }
+
+    if (req.method === 'POST' && url.pathname === '/action') {
+        const params = assertSearchParams(url, ['device', 'action'])
+        const cs = clients[params.device]
+        if (cs.length === 0) throw Error('no device')
+        const actions = deviceSchema[params.device as keyof typeof deviceSchema]
+        cs.forEach(c => c.send(new Uint8Array([actions.indexOf(params.action as any)])))
         res.statusCode = 200
         res.end()
     }
@@ -93,8 +104,9 @@ if (!distPath) {
 const server = createServer((req, res) => {
     handleRequest(req, res).catch(e => {
         error('request error', e)
+        res.setHeader('Content-Type', contentType['.txt'])
         res.statusCode = 500
-        res.end('Server error')
+        res.end(e.message ?? 'Server error')
     })
 })
 

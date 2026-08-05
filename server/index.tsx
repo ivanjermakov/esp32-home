@@ -15,6 +15,14 @@ const Main: Component = () => {
         setLoaded(true)
     })
 
+    const sendAction = async (device: Device, action: string) => {
+        const res = await fetch(`/action?device=${device.name}&action=${action}`, { method: 'POST' })
+        if (!res.ok) {
+            const msg = await res.text()
+            alert(`${res.status} ${msg}`)
+        }
+    }
+
     return (
         <>
             <Switch>
@@ -26,7 +34,11 @@ const Main: Component = () => {
                                 <span class="name">{device.name}</span>
                                 <For each={device.actions}>
                                     {action => (
-                                        <button type="button" disabled={!device.live}>
+                                        <button
+                                            type="button"
+                                            disabled={!device.live}
+                                            onClick={() => sendAction(device, action)}
+                                        >
                                             {action}
                                         </button>
                                     )}
