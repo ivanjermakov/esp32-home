@@ -1,6 +1,7 @@
 import { createReadStream } from 'fs'
 import { IncomingMessage, ServerResponse, createServer } from 'http'
 import { extname, join, normalize } from 'path'
+import { CronJob } from 'cron'
 import { stat } from 'fs/promises'
 import { exit } from 'process'
 import { WebSocketServer } from 'ws'
@@ -9,6 +10,11 @@ import { Device, Trigger, deviceSchema } from './api'
 import { db, initDb, sql } from './db'
 import { debug, error, info, request } from './log'
 import { assertSearchParams } from './url'
+
+type TriggerInstance = {
+    trigger: Trigger
+    job: CronJob
+}
 
 const streamFile = (filePath: string, res: ServerResponse): void => {
     const ext = extname(filePath).toLowerCase()
@@ -102,38 +108,55 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
         return
     }
     if (req.method === 'POST' && url.pathname === '/trigger') {
-        const body: Trigger = JSON.parse(new TextDecoder().decode(await readBody(req)))
+        const trigger: Trigger = JSON.parse(new TextDecoder().decode(await readBody(req)))
         const insert = await db.run(
             sql`insert into Trigger (device, body) values (?, ?)`,
-            body.device,
-            JSON.stringify(body)
+            trigger.device,
+            JSON.stringify(trigger)
         )
 
-        body.id = insert.lastID!
+        trigger.id = insert.lastID!
+        triggerInstance[trigger.id] = { trigger, job: spawnJob(trigger) }
+
         res.setHeader('Content-Type', contentType['.json'])
-        res.write(JSON.stringify(body))
+        res.write(JSON.stringify(trigger))
         res.statusCode = 201
         res.end()
         return
     }
     if (req.method === 'PUT' && url.pathname === '/trigger') {
-        const body: Trigger = JSON.parse(new TextDecoder().decode(await readBody(req)))
-        await db.run(sql`update Trigger set body = ? where id = ?`, JSON.stringify(body), body.id)
+        const trigger: Trigger = JSON.parse(new TextDecoder().decode(await readBody(req)))
+        await db.run(sql`update Trigger set body = ? where id = ?`, JSON.stringify(trigger), trigger.id)
+
+        const instance = triggerInstance[trigger.id]
+        instance.trigger = trigger
+        instance.trigger.enabled ? instance.job.start() : instance.job.stop()
 
         res.setHeader('Content-Type', contentType['.json'])
-        res.write(JSON.stringify(body))
+        res.write(JSON.stringify(trigger))
         res.statusCode = 201
         res.end()
         return
     }
-
     if (req.method === 'POST' && url.pathname === '/action') {
         const params = assertSearchParams(url, ['device', 'action'])
-        const cs = clients[params.device]
-        if (cs.length === 0) throw Error('no device')
-        const actions = deviceSchema[params.device as keyof typeof deviceSchema]
-        cs.forEach(c => c.send(new Uint8Array([actions.indexOf(params.action as any)])))
+        run(params.device, params.action)
         res.statusCode = 201
+        res.end()
+        return
+    }
+    if (req.method === 'GET' && url.pathname === '/jobs') {
+        res.setHeader('Content-Type', contentType['.json'])
+        res.write(
+            JSON.stringify(
+                Object.values(triggerInstance).map(i => ({
+                    trigger: i.trigger,
+                    last: i.job.lastDate(),
+                    next: i.job.nextDates(10)
+                }))
+            )
+        )
+        res.statusCode = 200
         res.end()
         return
     }
@@ -149,6 +172,27 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
     res.statusCode = 404
     res.end()
 }
+
+const run = (device: string, action: string) => {
+    info(`run ${device}/${action}`)
+    const cs = clients[device]
+    if (cs.length === 0) throw Error('no device')
+    const actions = deviceSchema[device as keyof typeof deviceSchema]
+    cs.forEach(c => c.send(new Uint8Array([actions.indexOf(action as any)])))
+}
+
+const onTick = (trigger: Trigger) => {
+    info('tick', trigger)
+    if (!trigger.enabled) return
+    try {
+        trigger.actions.forEach(action => run(trigger.device, action))
+    } catch (e) {
+        error('tick failed', e)
+    }
+}
+
+const spawnJob = (trigger: Trigger) =>
+    CronJob.from({ cronTime: trigger.cron, onTick: () => onTick(trigger), start: trigger.enabled })
 
 const distPath = process.env.HOME_DIST!
 if (!distPath) {
@@ -230,3 +274,14 @@ setInterval(() => {
         })
     )
 }, 10e3)
+
+const triggerInstance: { [id: number]: TriggerInstance } = Object.fromEntries(
+    (await db.all(sql`select * from Trigger`)).map(row => {
+        const trigger: Trigger = { ...JSON.parse(row.body), id: row.id }
+        const ti: TriggerInstance = {
+            trigger,
+            job: spawnJob(trigger)
+        }
+        return [row.id, ti]
+    })
+)
