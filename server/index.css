@@ -29,6 +29,7 @@
 body {
     background-color: var(--bg);
     color: var(--fg);
+    justify-content: center;
 }
 
 html {
@@ -40,6 +41,7 @@ html, body {
     display: flex;
     margin: 0;
     overflow: hidden;
+    width: 100%;
 }
 
 * {
@@ -131,6 +133,40 @@ select {
     display: flex;
     flex-direction: column;
     width: 100%;
+    max-width: 480px;
     height: 100%;
+    margin: 1rem;
+
+    .device {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background-color: var(--bg2);
+        border-radius: 1rem;
+
+        .status {
+            color: var(--red);
+
+            &.live {
+                color: var(--green);
+            }
+        }
+
+        .name {
+            padding-bottom: .2rem;
+            font-size: 1.5rem;
+        }
+
+
+        button {
+            width: 5rem;
+            padding: 1rem;
+
+            &:first-of-type {
+                margin-left: auto;
+            }
+        }
+    }
 }
 
