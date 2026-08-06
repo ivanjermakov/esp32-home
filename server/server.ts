@@ -194,9 +194,8 @@ const run = (device: string, action: string) => {
 }
 
 const onTick = (trigger: Trigger) => {
-    info('tick', trigger)
-    if (!trigger.enabled) return
     try {
+        info('tick', trigger)
         trigger.actions.forEach(action => run(trigger.device, action))
     } catch (e) {
         error('tick failed', e)
