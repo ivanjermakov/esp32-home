@@ -1,6 +1,7 @@
 /* @refresh reload */
 
 import { BsCircleFill } from 'solid-icons/bs'
+import { MdRoundDelete_forever } from 'solid-icons/md'
 import { Component, For, Match, Switch, createSignal, onMount } from 'solid-js'
 import { render } from 'solid-js/web'
 import { Device, Trigger } from './api'
@@ -52,6 +53,16 @@ const Main: Component = () => {
         setDevices(await (await fetch('/devices')).json())
     }
 
+    const deleteTrigger = async (trigger: Trigger) => {
+        if (!confirm(`delete trigger? ${trigger.device} at ${trigger.cron}`)) return
+        const res = await fetch(`/trigger?id=${trigger.id}`, { method: 'DELETE' })
+        if (!res.ok) {
+            const msg = await res.text()
+            alert(`${res.status} ${msg}`)
+        }
+        setDevices(await (await fetch('/devices')).json())
+    }
+
     return (
         <>
             <Switch>
@@ -89,26 +100,21 @@ const Main: Component = () => {
                                                 <For each={trigger.actions}>
                                                     {action => <span class="action">{action}</span>}
                                                 </For>
+                                                <MdRoundDelete_forever
+                                                    class="delete"
+                                                    onClick={() => deleteTrigger(trigger)}
+                                                />
                                             </div>
                                         )}
                                     </For>
                                     <form>
-                                        <input
-                                            type="text"
-                                            placeholder="0 0 * * *"
-                                            value={$cron()}
-                                            onInput={e => setCron(e.target.value)}
-                                        />
+                                        <input type="text" value={$cron()} onInput={e => setCron(e.target.value)} />
                                         <select value={$action()} onInput={e => setAction(e.target.value)}>
                                             <For each={device.actions}>
                                                 {action => <option value={action}>{action}</option>}
                                             </For>
                                         </select>
-                                        <button
-                                            type="submit"
-                                            disabled={!device.live}
-                                            onClick={e => addTrigger(e, device)}
-                                        >
+                                        <button type="submit" onClick={e => addTrigger(e, device)}>
                                             add
                                         </button>
                                     </form>

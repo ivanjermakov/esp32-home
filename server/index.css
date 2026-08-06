@@ -199,6 +199,16 @@ select {
                     padding-inline: .25rem;
                     border-radius: .25rem;
                 }
+
+                .delete {
+                    font-size: 1.5rem;
+                    margin-left: auto;
+
+                    &:hover {
+                        color: var(--red);
+                        cursor: pointer;
+                    }
+                }
             }
         }
     }

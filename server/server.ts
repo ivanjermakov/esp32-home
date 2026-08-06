@@ -138,6 +138,18 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise
         res.end()
         return
     }
+    if (req.method === 'DELETE' && url.pathname === '/trigger') {
+        const params = assertSearchParams(url, ['id'])
+        await db.run(sql`delete from Trigger where id = ?`, params.id)
+
+        const instance = triggerInstance[Number.parseInt(params.id)]
+        instance.job.stop()
+        delete triggerInstance[Number.parseInt(params.id)]
+
+        res.statusCode = 204
+        res.end()
+        return
+    }
     if (req.method === 'POST' && url.pathname === '/action') {
         const params = assertSearchParams(url, ['device', 'action'])
         run(params.device, params.action)
