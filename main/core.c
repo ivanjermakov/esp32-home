@@ -17,5 +17,6 @@
 #include "sdkconfig.h"
 #include "stdio.h"
 
+#define LED_GPIO 2
 #define IR_TX_GPIO 4
 #define IR_RX_GPIO 15

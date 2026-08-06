@@ -23,12 +23,19 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
             ESP_LOGI(__FILE__, "disconnected");
             break;
         }
+        case WEBSOCKET_EVENT_CLOSED: {
+            ESP_LOGI(__FILE__, "closed");
+            break;
+        }
     }
 }
 
 void ws_main(void) {
     esp_websocket_client_config_t ws_cfg = {};
     ws_cfg.uri = "ws://home.lab.lan/ac";
+    ws_cfg.enable_close_reconnect = true;
+    ws_cfg.reconnect_timeout_ms = 10000;
+    ws_cfg.network_timeout_ms = 10000;
     ws_cfg.task_prio = 5;
     ws_cfg.task_stack = 4096;
     ws_cfg.buffer_size = 1024;

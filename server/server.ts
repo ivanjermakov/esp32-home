@@ -285,7 +285,7 @@ setInterval(() => {
             ws.isAlive = false
         })
     )
-}, 10e3)
+}, 60e3)
 
 const triggerInstance: { [id: number]: TriggerInstance } = Object.fromEntries(
     (await db.all(sql`select * from Trigger`)).map(row => {
