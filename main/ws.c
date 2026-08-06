@@ -5,7 +5,7 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
     esp_websocket_event_data_t* data = (esp_websocket_event_data_t*)event_data;
     switch (event_id) {
         case WEBSOCKET_EVENT_CONNECTED: {
-            esp_websocket_client_send_text(data->client, "Hello", 5, portMAX_DELAY);
+            ESP_LOGI(__FILE__, "ws connected");
             break;
         }
         case WEBSOCKET_EVENT_DATA: {
@@ -15,20 +15,7 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
             ESP_LOG_BUFFER_HEX(__FILE__, data->data_ptr, data->data_len);
             if (data->data_len == 1) {
                 uint8_t cmd = data->data_ptr[0];
-                switch (cmd) {
-                    case 0x00: {
-                        ir_send_on();
-                        break;
-                    }
-                    case 0x01: {
-                        ir_send_off();
-                        break;
-                    }
-                    default: {
-                        ESP_LOGI(__FILE__, "unknown command %d", cmd);
-                        break;
-                    }
-                }
+                xQueueSend(ir_tx_queue, &cmd, 0);
             }
             break;
         }

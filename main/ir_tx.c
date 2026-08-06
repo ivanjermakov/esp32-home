@@ -2,6 +2,8 @@
 
 #include "core.c"
 
+QueueHandle_t ir_tx_queue;
+
 void ir_nec_send_timing(uint32_t on, uint32_t off) {
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1023 / 3);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
@@ -62,6 +64,8 @@ void ir_send_off() {
 void ir_tx_init() {
     esp_log_level_set(__FILE__, ESP_LOG_VERBOSE);
 
+    ir_tx_queue = xQueueCreate(64, sizeof(uint8_t));
+
     ledc_timer_config_t timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .timer_num = LEDC_TIMER_0,
@@ -83,11 +87,23 @@ void ir_tx_init() {
 }
 
 void ir_tx_task(void* arg) {
-    while (true) {
-        ir_send_on();
-        vTaskDelay(pdMS_TO_TICKS(5000));
-        ir_send_off();
-        vTaskDelay(pdMS_TO_TICKS(5000));
+    uint8_t cmd;
+    while (xQueueReceive(ir_tx_queue, &cmd, portMAX_DELAY)) {
+        ESP_LOGD(__FILE__, "sending command %d", cmd);
+        switch (cmd) {
+            case 0x00: {
+                ir_send_on();
+                break;
+            }
+            case 0x01: {
+                ir_send_off();
+                break;
+            }
+            default: {
+                ESP_LOGI(__FILE__, "unknown command %d", cmd);
+                break;
+            }
+        }
     }
 }
 

@@ -7,6 +7,6 @@
 void app_main() {
     esp_log_level_set(__FILE__, ESP_LOG_VERBOSE);
     main_wifi();
-    ir_tx_init();
+    main_ir_tx();
     ws_main();
 }

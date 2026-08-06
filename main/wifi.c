@@ -40,6 +40,7 @@ void wifi_connect(void) {
                                         NULL);
     esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL,
                                         NULL);
+    esp_wifi_set_max_tx_power(84);
     esp_wifi_start();
     esp_wifi_connect();
 

@@ -8,7 +8,7 @@ import { WebSocketServer } from 'ws'
 import { WebSocket } from 'ws'
 import { Device, Trigger, deviceSchema } from './api'
 import { db, initDb, sql } from './db'
-import { debug, error, info, request } from './log'
+import { debug, error, info, request, warn } from './log'
 import { assertSearchParams } from './url'
 
 type TriggerInstance = {
@@ -276,7 +276,8 @@ setInterval(() => {
     Object.entries(clients).forEach(([name, group]) =>
         group.forEach(ws => {
             if (!ws.isAlive) {
-                debug(`client "${name}" heartbeat failed`)
+                warn(`client "${name}" heartbeat failed`)
+                ws.close()
                 const i = clients[name].indexOf(ws)
                 if (i >= 0) clients[name].splice(i, 1)
             }
