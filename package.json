@@ -2,7 +2,7 @@
     "name": "esp32-home",
     "version": "1.0.0",
     "scripts": {
-        "start": "node --import=tsx server/server.ts",
+        "start": "npm run build:fe && node --import=tsx server/server.ts",
         "build:fe": "tsgo && vite build",
         "watch:fe": "find server | entr npm run build:fe"
     },
@@ -12,15 +12,15 @@
         "date-fns": "4.4.0",
         "solid-icons": "1.2.0",
         "solid-js": "1.9.9",
-        "ws": "8.21.1",
         "sqlite": "5.1.1",
-        "sqlite3": "6.0.1"
+        "sqlite3": "6.0.1",
+        "ws": "8.21.1"
     },
     "devDependencies": {
         "@types/node": "24.5.2",
         "@types/ws": "8.18.1",
+        "@typescript/native-preview": "7.0.0-dev.20260707.2",
         "tsx": "4.23.5",
-        "typescript": "5.9.2",
         "vite": "7.1.6",
         "vite-plugin-solid": "2.11.8"
     }

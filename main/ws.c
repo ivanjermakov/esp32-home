@@ -41,7 +41,7 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
 
 void ws_main(void) {
     esp_websocket_client_config_t ws_cfg = {};
-    ws_cfg.uri = "ws://192.168.0.3:3000/ac";
+    ws_cfg.uri = "ws://home.lab.lan/ac";
     ws_cfg.task_prio = 5;
     ws_cfg.task_stack = 4096;
     ws_cfg.buffer_size = 1024;

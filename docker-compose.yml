@@ -1,0 +1,15 @@
+services:
+  home:
+    container_name: home
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: "host"
+    volumes:
+      - ./database.db:/database.db:rw
+      - ./resource:/resource
+    environment:
+      - HOME_DIST=dist
+      - HOME_PORT=3005
+    restart: unless-stopped
+
