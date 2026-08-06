@@ -1,5 +1,6 @@
 #include "core.c"
 #include "ir_tx.c"
+#include "led.c"
 
 void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data) {
     esp_websocket_event_data_t* data = (esp_websocket_event_data_t*)event_data;
@@ -9,6 +10,7 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
             break;
         }
         case WEBSOCKET_EVENT_DATA: {
+            xSemaphoreGive(led_sem);
             if (data->data_len == 0) break;
             ESP_LOGI(__FILE__, "recv %d bytes: %.*s", data->data_len, data->data_len,
                      (char*)data->data_ptr);
