@@ -20,7 +20,7 @@ void IRAM_ATTR ir_rx_isr(void* arg) {
 void ir_rx_task(void* arg) {
     while (true) {
         if (code_len > 0) {
-            ESP_LOGD(__FILE__, "code received");
+            ESP_LOGI(__FILE__, "code received");
             for (uint32_t i = 0; i < code_len; i++) {
                 printf("%ld ", code_buf[i]);
             }

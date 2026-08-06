@@ -17,7 +17,7 @@ void ws_handler(void* handler_args, esp_event_base_t base, int32_t event_id, voi
             ESP_LOG_BUFFER_HEX(__FILE__, data->data_ptr, data->data_len);
             if (data->data_len == 1) {
                 uint8_t cmd = data->data_ptr[0];
-                xQueueSend(ir_tx_queue, &cmd, 0);
+                xQueueSend(ir_tx_queue, &cmd, portMAX_DELAY);
             }
             break;
         }
